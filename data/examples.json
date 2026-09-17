@@ -1,0 +1,38 @@
+[
+  {
+    "complaint_id": "CMP-001",
+    "customer_id": "CUS-1001",
+    "channel": "web",
+    "message": "Mi pedido lleva tres días de retraso y nadie me da una solución."
+  },
+  {
+    "complaint_id": "CMP-002",
+    "customer_id": "CUS-1002",
+    "channel": "app",
+    "message": "Me cobraron dos veces la misma factura y necesito el reembolso de mi dinero."
+  },
+  {
+    "complaint_id": "CMP-003",
+    "customer_id": "CUS-1003",
+    "channel": "email",
+    "message": "El producto llegó dañado y no funciona, es de muy mala calidad."
+  },
+  {
+    "complaint_id": "CMP-004",
+    "customer_id": "CUS-1004",
+    "channel": "web",
+    "message": "Quisiera saber el horario de atención de la tienda los fines de semana."
+  },
+  {
+    "complaint_id": "CMP-005",
+    "customer_id": "CUS-1005",
+    "channel": "phone",
+    "message": "No sé, tal vez, no estoy seguro de lo que pasó con mi pedido."
+  },
+  {
+    "complaint_id": "CMP-006",
+    "customer_id": "CUS-1006",
+    "channel": "email",
+    "message": "Esto es una estafa, voy a contactar a mi abogado y poner una demanda."
+  }
+]

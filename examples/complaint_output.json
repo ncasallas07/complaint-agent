@@ -1,0 +1,12 @@
+{
+  "complaint_id": "CMP-001",
+  "is_complaint": true,
+  "category": "entrega",
+  "severity": "alta",
+  "sentiment": "negativo",
+  "priority": "urgente",
+  "summary": "Cliente inconforme por un problema relacionado con la entrega del pedido.",
+  "recommended_action": "Escalar el caso al área de logística y dar seguimiento al envío.",
+  "confidence": 0.85,
+  "needs_human_review": false
+}
