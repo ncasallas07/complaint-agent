@@ -342,14 +342,8 @@ body {
 
 .icon { flex-shrink: 0; }
 
-/* ---------- Pie ---------- */
-.footer {
-  color: var(--muted);
-  font-size: .85rem;
-  text-align: center;
-  padding-top: 28px;
-  padding-bottom: 28px;
-}
+/* Espacio inferior de la página */
+main.container { padding-bottom: 32px; }
 
 /* ---------- Celular ---------- */
 @media (max-width: 480px) {
