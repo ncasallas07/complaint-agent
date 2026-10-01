@@ -1,1 +1,2 @@
 {"timestamp": "2026-09-01T10:15:00+00:00", "complaint_id": "CMP-000", "channel": "web", "is_complaint": true, "category": "entrega", "severity": "alta", "sentiment": "negativo", "priority": "urgente", "confidence": 0.85, "needs_human_review": false}
+{"timestamp": "2026-09-30T21:45:04.535739+00:00", "complaint_id": "CMP-001", "channel": "web", "is_complaint": true, "category": "entrega", "severity": "alta", "sentiment": "negativo", "priority": "urgente", "confidence": 0.85, "needs_human_review": false}
