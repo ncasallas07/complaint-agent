@@ -3,6 +3,12 @@
 ## Flujo general
 
 ```
+Usuario
+   │
+   ▼
+Interfaz web HTML/CSS/JS (app/static)   ← o cualquier otro cliente HTTP
+   │  fetch("/agent/complaint")
+   ▼
 Entrada JSON
    │
    ▼
@@ -29,6 +35,15 @@ usando el modelo `ComplaintRequest` (Pydantic). Si falta un campo obligatorio
 o el mensaje está vacío, la API responde `HTTP 400` con un cuerpo JSON
 estructurado (`error`, `details`). La API no contiene lógica de negocio: solo
 recibe la solicitud, delega en `ComplaintAgent` y devuelve la respuesta.
+
+### 1.1 Interfaz web (`app/static/`)
+Página sencilla en HTML, CSS y JavaScript *vanilla* servida por la misma
+aplicación FastAPI: `GET /` devuelve `index.html` y `/static` sirve el CSS y el
+JavaScript. No tiene lógica de clasificación ni credenciales: arma la
+solicitud JSON, la envía a `POST /agent/complaint` con una ruta relativa y
+muestra el resultado (incluidos los estados de carga y error). Por usar rutas
+relativas funciona igual en local y en EC2. La ruta `/` no aparece en
+Swagger, que sigue documentando únicamente la API.
 
 ### 2. Agente (`app/agent.py`)
 Orquesta el flujo completo:

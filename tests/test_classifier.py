@@ -36,3 +36,18 @@ def test_queja_critica():
 def test_mensaje_ambiguo_tiene_baja_confianza():
     result = model.classify("No sé, tal vez, no estoy seguro de lo que pasó.")
     assert result["confidence"] < 0.80
+
+
+def test_queja_con_problema_concreto_es_negativa():
+    # Sin adjetivos emocionales, pero describe retraso, daño y urgencia.
+    result = model.classify(
+        "Mi pedido llegó con 5 días de retraso y el producto vino dañado. "
+        "Necesito una solución urgente."
+    )
+    assert result["is_complaint"] is True
+    assert result["sentiment"] == "negativo"
+
+
+def test_mensaje_positivo_sigue_siendo_positivo():
+    result = model.classify("Gracias, el pedido llegó a tiempo y estoy muy contento.")
+    assert result["sentiment"] == "positivo"

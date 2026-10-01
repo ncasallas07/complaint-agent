@@ -1,17 +1,22 @@
 """API principal de ComplaintAgent AI.
 
 Arquitectura:
-    Cliente -> API (FastAPI, este archivo) -> ComplaintAgent -> Modelo de IA
-    -> Reglas de negocio -> Respuesta JSON
+    Usuario -> Interfaz web (app/static) -> API (FastAPI, este archivo)
+    -> ComplaintAgent -> Modelo de IA -> Reglas de negocio -> Respuesta JSON
+
+La interfaz web es un cliente más de la API: solo consume
+POST /agent/complaint mediante fetch() con rutas relativas.
 """
 from __future__ import annotations
 
 import logging
 import os
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .agent import ComplaintAgent
 from .models import ComplaintRequest, ComplaintResponse, ErrorDetail, ErrorResponse
@@ -28,6 +33,11 @@ app = FastAPI(
 )
 
 agent = ComplaintAgent()
+
+# Interfaz web (HTML/CSS/JS vanilla). Se sirve desde el mismo servidor, por lo
+# que funciona igual en localhost y en la IP pública de EC2.
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 
 @app.exception_handler(RequestValidationError)
@@ -46,6 +56,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     ]
     body = ErrorResponse(error="validation_error", details=details)
     return JSONResponse(status_code=400, content=body.model_dump())
+
+
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    """Página principal: interfaz web de ComplaintAgent AI."""
+    return FileResponse(STATIC_DIR / "index.html")
 
 
 @app.get("/health")

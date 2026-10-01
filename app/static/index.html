@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ComplaintAgent AI</title>
+  <meta name="description" content="Sistema inteligente para análisis y clasificación de quejas">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Cpath d='M9 11h14v8h-7l-4 4v-4H9z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar__inner">
+      <div class="brand">
+        <span class="brand__logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M4 6h16v10h-9l-5 4v-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="9" cy="11" r="1.2" fill="currentColor"/><circle cx="12" cy="11" r="1.2" fill="currentColor"/><circle cx="15" cy="11" r="1.2" fill="currentColor"/></svg>
+        </span>
+        <div>
+          <h1 class="brand__title">ComplaintAgent AI</h1>
+          <p class="brand__subtitle">Sistema inteligente para análisis y clasificación de quejas</p>
+        </div>
+      </div>
+      <nav class="topbar__links" aria-label="Enlaces técnicos">
+        <a href="/docs" target="_blank" rel="noopener">API (Swagger)</a>
+        <a href="/health" target="_blank" rel="noopener">Estado</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container">
+    <p class="intro">
+      Escriba la queja de un cliente y el agente de IA la clasificará: categoría,
+      severidad, sentimiento y prioridad, con un resumen, una acción recomendada
+      y la indicación de si requiere revisión humana.
+    </p>
+
+    <div class="layout">
+      <!-- ============ FORMULARIO ============ -->
+      <section class="card" aria-labelledby="form-title">
+        <h2 id="form-title" class="card__title">Nueva queja</h2>
+
+        <form id="complaint-form" novalidate>
+          <div class="row">
+            <div class="field">
+              <label for="complaint_id">ID de queja</label>
+              <input id="complaint_id" name="complaint_id" type="text" placeholder="CMP-001" autocomplete="off" required>
+              <p class="field__error" id="complaint_id-error"></p>
+            </div>
+            <div class="field">
+              <label for="customer_id">ID del cliente</label>
+              <input id="customer_id" name="customer_id" type="text" placeholder="CUS-1001" autocomplete="off" required>
+              <p class="field__error" id="customer_id-error"></p>
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="channel">Canal</label>
+            <!-- Los valores coinciden con los usados por la API (examples/ y tests/). -->
+            <select id="channel" name="channel" required>
+              <option value="" disabled selected>Seleccione un canal</option>
+              <option value="web">Web</option>
+              <option value="app">App</option>
+              <option value="email">Correo</option>
+              <option value="phone">Teléfono</option>
+            </select>
+            <p class="field__error" id="channel-error"></p>
+          </div>
+
+          <div class="field field--message">
+            <label for="message">Mensaje de la queja</label>
+            <textarea id="message" name="message" rows="8" placeholder="Escriba aquí la queja del cliente..." required></textarea>
+            <p class="field__error" id="message-error"></p>
+          </div>
+
+          <div class="actions">
+            <button type="submit" id="submit-btn" class="btn btn--primary">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="btn__label">Analizar queja</span>
+            </button>
+            <button type="button" id="reset-btn" class="btn btn--ghost">Limpiar</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- ============ RESULTADO ============ -->
+      <section class="card card--result" aria-labelledby="result-title" aria-live="polite">
+        <h2 id="result-title" class="card__title">Resultado del análisis</h2>
+
+        <!-- Estado inicial -->
+        <div id="state-empty" class="state">
+          <p>El resultado aparecerá aquí después de analizar una queja.</p>
+        </div>
+
+        <!-- Estado cargando -->
+        <div id="state-loading" class="state" hidden>
+          <span class="spinner spinner--lg" aria-hidden="true"></span>
+          <p>Analizando queja...</p>
+        </div>
+
+        <!-- Estado de error -->
+        <div id="state-error" class="alert alert--error" role="alert" hidden>
+          <strong id="error-title">No fue posible analizar la queja.</strong>
+          <p id="error-text">Verifique que el servicio esté disponible e inténtelo nuevamente.</p>
+        </div>
+
+        <!-- Estado exitoso -->
+        <div id="state-result" hidden>
+          <div id="r-status" class="status"></div>
+
+          <dl class="metrics">
+            <div class="metric">
+              <dt>Categoría</dt>
+              <dd><span id="r-category" class="pill"></span></dd>
+            </div>
+            <div class="metric">
+              <dt>Severidad</dt>
+              <dd><span id="r-severity" class="pill"></span></dd>
+            </div>
+            <div class="metric">
+              <dt>Sentimiento</dt>
+              <dd><span id="r-sentiment" class="pill"></span></dd>
+            </div>
+            <div class="metric">
+              <dt>Prioridad</dt>
+              <dd><span id="r-priority" class="pill"></span></dd>
+            </div>
+          </dl>
+
+          <div class="confidence">
+            <div class="confidence__head">
+              <span>Confianza</span>
+              <strong id="r-confidence-value"></strong>
+            </div>
+            <div class="bar" role="progressbar" aria-label="Confianza" aria-valuemin="0" aria-valuemax="100" id="r-confidence-bar">
+              <div class="bar__fill" id="r-confidence-fill"></div>
+              <div class="bar__threshold" title="Por debajo del 80 % se solicita revisión humana"></div>
+            </div>
+            <p class="confidence__note">Umbral de revisión humana: 80 %</p>
+          </div>
+
+          <div class="block">
+            <h3>Resumen</h3>
+            <p id="r-summary"></p>
+          </div>
+
+          <div class="block">
+            <h3>Acción recomendada</h3>
+            <p id="r-action"></p>
+          </div>
+
+          <div id="r-review" class="review"></div>
+
+          <p class="meta">Queja <span id="r-id"></span></p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="footer container">
+    <p>ComplaintAgent AI · Electiva III — Cloud Computing · FastAPI + AWS EC2</p>
+  </footer>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>

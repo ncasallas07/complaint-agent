@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import os
+import unicodedata
 from typing import Dict
 
 logger = logging.getLogger("complaint_agent.classifier")
@@ -47,6 +48,17 @@ NEGATIVE_WORDS = [
     "insatisfecho", "queja", "problema", "nadie", "solucion",
 ]
 
+# Palabras que describen un problema concreto (retraso, daño, urgencia...).
+# Solo se usan para el sentimiento: un cliente que reporta un producto
+# dañado o un pedido retrasado expresa insatisfacción aunque no use
+# adjetivos emocionales como "molesto" o "terrible".
+PROBLEM_WORDS = [
+    "retraso", "retrasado", "demora", "demorado", "danado", "defectuoso",
+    "roto", "no funciona", "no llego", "nunca llego", "perdido", "incompleto",
+    "vencido", "falla", "error", "urgente", "cobraron dos veces", "cobro doble",
+    "mala calidad", "golpeado", "reclamo", "devolucion",
+]
+
 POSITIVE_WORDS = [
     "gracias", "excelente", "genial", "satisfecho", "feliz", "contento", "buen",
 ]
@@ -62,6 +74,12 @@ NON_COMPLAINT_INDICATORS = [
     "horario de atencion", "horario de atención", "informacion sobre",
     "información sobre", "tienen disponible", "hacen envios a", "hacen envíos a",
 ]
+
+
+def _strip_accents(text: str) -> str:
+    """Elimina tildes para comparar 'solución' con 'solucion', 'dañado' con 'danado'."""
+    normalized = unicodedata.normalize("NFD", text)
+    return "".join(ch for ch in normalized if unicodedata.category(ch) != "Mn")
 
 
 def _count_matches(text: str, words: list) -> int:
@@ -145,9 +163,17 @@ class LocalHeuristicModel(BaseComplaintModel):
         critical = _count_matches(text, CRITICAL_WORDS) > 0
         is_question = _count_matches(text, NON_COMPLAINT_INDICATORS) > 0
 
-        if pos_count > neg_count:
+        # Sentimiento: emociones negativas + problemas concretos, sin tildes.
+        plain_text = _strip_accents(text)
+        sentiment_neg = (
+            _count_matches(plain_text, [_strip_accents(w) for w in NEGATIVE_WORDS])
+            + _count_matches(plain_text, PROBLEM_WORDS)
+        )
+        sentiment_pos = _count_matches(plain_text, [_strip_accents(w) for w in POSITIVE_WORDS])
+
+        if sentiment_pos > sentiment_neg:
             sentiment = "positivo"
-        elif neg_count > pos_count:
+        elif sentiment_neg > sentiment_pos:
             sentiment = "negativo"
         else:
             sentiment = "neutral"

@@ -22,19 +22,29 @@ Construir un agente de inteligencia artificial, expuesto como API, que:
 7. Devuelva todo en una respuesta JSON estructurada, lista para integrarse
    con otros sistemas (CRM, mesa de ayuda, dashboards).
 
+Además, incluye una **interfaz web** sencilla (HTML/CSS/JavaScript) para
+registrar una queja desde un formulario y ver el resultado del análisis sin
+usar Swagger.
+
 ## 3. Arquitectura
 
 ```
-Cliente → API Python (FastAPI) → ComplaintAgent → Modelo de IA
-        → Reglas de negocio → Respuesta JSON
+Usuario → Interfaz web (HTML/CSS/JS) → API Python (FastAPI) → ComplaintAgent
+        → Modelo de IA → Reglas de negocio → Respuesta JSON
 ```
+
+La interfaz web es un cliente más de la API: envía la queja a
+`POST /agent/complaint` con `fetch()` y muestra la respuesta JSON de forma
+visual. Otros sistemas pueden seguir consumiendo la API directamente.
 
 El detalle de cada componente está en [docs/architecture.md](docs/architecture.md).
 
 ## 4. Tecnologías
 
-- Python 3.11+
+- Python 3.11+ (probado con Python 3.14.7)
 - FastAPI + Uvicorn
+- HTML, CSS y JavaScript *vanilla* para la interfaz web (sin frameworks ni
+  dependencias adicionales)
 - Pydantic (validación de datos)
 - JSON / JSONL como formato de datos e intercambio
 - AWS EC2 (despliegue)
@@ -52,13 +62,18 @@ complaint-agent/
 │   ├── agent.py         # Orquestador: modelo + reglas + logging
 │   ├── classifier.py     # Capa del modelo de IA (local y Bedrock)
 │   ├── rules.py          # Reglas de negocio
-│   └── models.py         # Esquemas Pydantic (request/response/error)
+│   ├── models.py         # Esquemas Pydantic (request/response/error)
+│   └── static/           # Interfaz web (servida en /)
+│       ├── index.html
+│       ├── style.css
+│       └── script.js
 ├── data/
 │   ├── complaints.jsonl   # Registro simulado de quejas procesadas
 │   └── examples.json      # Ejemplos de solicitudes de prueba
 ├── tests/
 │   ├── test_agent.py
-│   └── test_classifier.py
+│   ├── test_classifier.py
+│   └── test_frontend.py
 ├── docs/
 │   ├── architecture.md
 │   └── api.md
@@ -73,15 +88,32 @@ complaint-agent/
 
 ## 6. Instalación
 
-Requisitos: Python 3.11 o superior.
+Requisitos: Python 3.11 o superior (probado con Python 3.14.7).
 
 ```bash
 git clone <url-del-repositorio>
 cd complaint-agent
 python -m venv venv
-source venv/bin/activate          # En Windows: venv\Scripts\activate
+```
+
+Activar el entorno virtual:
+
+```bash
+# Windows
+venv\Scripts\activate
+
+# Linux / macOS / EC2
+source venv/bin/activate
+```
+
+Instalar dependencias:
+
+```bash
 pip install -r requirements.txt
 ```
+
+La interfaz web no requiere instalar nada adicional (no usa Node.js, npm ni
+frameworks de frontend).
 
 ## 7. Configuración
 
@@ -108,10 +140,32 @@ Variables disponibles:
 ## 8. Ejecución local
 
 ```bash
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Probar el servicio:
+Una vez iniciado:
+
+| Recurso                  | URL                              |
+|--------------------------|----------------------------------|
+| Interfaz web             | http://localhost:8000/           |
+| Documentación (Swagger)  | http://localhost:8000/docs       |
+| Health check             | http://localhost:8000/health     |
+
+### Interfaz web
+
+En `http://localhost:8000/` se muestra un formulario con ID de queja, ID del
+cliente, canal (Web, App, Correo, Teléfono) y el mensaje. Al pulsar
+**Analizar queja**, la página envía la solicitud a `POST /agent/complaint` y
+muestra categoría, severidad, sentimiento, prioridad, confianza, resumen,
+acción recomendada y si se requiere revisión humana.
+
+- La interfaz solo **consume la API existente**; la clasificación y la
+  validación (Pydantic) siguen ocurriendo en el backend.
+- Usa rutas relativas (`fetch("/agent/complaint")`), por lo que funciona igual
+  en `localhost` y en la IP pública de EC2 sin cambiar nada.
+- No contiene credenciales, API keys ni secretos.
+
+### Probar la API directamente
 
 ```bash
 curl http://localhost:8000/health
@@ -121,7 +175,7 @@ curl -X POST http://localhost:8000/agent/complaint \
   -d @examples/complaint_input.json
 ```
 
-Documentación interactiva (Swagger) disponible en:
+Documentación interactiva (Swagger), para la demostración técnica de la API:
 `http://localhost:8000/docs`
 
 ## 9. Ejemplos de entrada y salida
@@ -161,10 +215,11 @@ El detalle de todos los endpoints está en [docs/api.md](docs/api.md).
 ## 10. Pruebas
 
 ```bash
-pytest -v
+python -m pytest -v
 ```
 
-Casos cubiertos (`tests/test_agent.py` y `tests/test_classifier.py`):
+Casos cubiertos (`tests/test_agent.py`, `tests/test_classifier.py` y
+`tests/test_frontend.py`):
 
 1. Queja de entrega
 2. Queja de facturación
@@ -175,6 +230,10 @@ Casos cubiertos (`tests/test_agent.py` y `tests/test_classifier.py`):
 7. JSON incompleto (falta un campo obligatorio) → HTTP 400
 8. Mensaje vacío → HTTP 400
 9. Clasificación con baja confianza → `needs_human_review = true`
+10. Interfaz web: `/` sirve la página, los archivos estáticos están
+    disponibles y el script usa rutas relativas
+11. Swagger (`/docs`) y `/health` siguen funcionando
+12. La estructura de la respuesta de `POST /agent/complaint` no cambió
 
 ## 11. Despliegue en AWS EC2
 
@@ -232,6 +291,9 @@ Casos cubiertos (`tests/test_agent.py` y `tests/test_classifier.py`):
    ```bash
    curl http://<IP-PUBLICA>:8000/health
    ```
+   Interfaz web: `http://<IP-PUBLICA>:8000/` · Swagger:
+   `http://<IP-PUBLICA>:8000/docs`. No hay que modificar la interfaz para EC2,
+   porque usa rutas relativas.
 
 ## 12. Seguridad
 
